@@ -6,9 +6,10 @@ package com.palashmax.mangareader
 import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.result.Result;
 import org.jsoup.Jsoup
+import java.util.stream.Collectors
 
 class MangaReader {
-    fun fetchTitles(): Boolean {
+    fun fetchTitles(): List<String> {
         val (request, response, result) = "https://www.mangareader.net/alphabetical"
             .httpGet()
             .responseString()
@@ -23,20 +24,23 @@ class MangaReader {
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
                 var series_alpha_uls = doc.select("ul.series_alpha")
-                series_alpha_uls.stream().map { series_alpha_ul -> {
-                    var series_alpha_ul_lis = series_alpha_ul.select("li")
-                    series_alpha_ul_lis.stream().map{ series_alpha_ul_li -> {
-                        series_alpha_ul_li.text()
-                    } }
-                } }.toArray()
-                print(series_alpha_uls)
+                var mangaList = ArrayList<String>()
+                series_alpha_uls.stream().forEach { series_alpha_ul ->
+                    series_alpha_ul.select("li")
+                        .stream()
+                        .forEach{ series_alpha_ul_li ->
+                            mangaList.add(series_alpha_ul_li.select("a").text())
+                        }
+                }
+                return mangaList
             }
         }
-        return true
+        return ArrayList<String>()
     }
 }
 
 fun main() {
     val mr = MangaReader()
-    mr.fetchTitles()
+    val titles = mr.fetchTitles()
+
 }
