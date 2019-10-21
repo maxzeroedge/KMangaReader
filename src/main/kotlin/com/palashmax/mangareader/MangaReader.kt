@@ -9,7 +9,7 @@ import org.jsoup.Jsoup
 import java.util.stream.Collectors
 
 class MangaReader {
-    fun fetchTitles(): List<String> {
+    fun fetchTitles(): List<Map<String, String>> {
         val (request, response, result) = "https://www.mangareader.net/alphabetical"
             .httpGet()
             .responseString()
@@ -24,23 +24,95 @@ class MangaReader {
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
                 var series_alpha_uls = doc.select("ul.series_alpha")
-                var mangaList = ArrayList<String>()
+                var mangaList = ArrayList<Map<String, String>>()
                 series_alpha_uls.stream().forEach { series_alpha_ul ->
                     series_alpha_ul.select("li")
                         .stream()
                         .forEach{ series_alpha_ul_li ->
-                            mangaList.add(series_alpha_ul_li.select("a").text())
+                            mangaList.add(
+                                    mapOf(
+                                        Pair( "url", series_alpha_ul_li.select("a").attr("href") ),
+                                        Pair( "name", series_alpha_ul_li.select("a").text() )
+                                    )
+                            )
                         }
                 }
                 return mangaList
             }
         }
-        return ArrayList<String>()
+        return ArrayList<Map<String, String>>()
+    }
+
+    fun fetchChapters(url: String, url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
+        val (request, response, result) = url
+                .httpGet()
+                .responseString()
+
+        when (result) {
+            is Result.Failure -> {
+                val ex = result.getException()
+                println(ex)
+            }
+            is Result.Success -> {
+                val data = result.get()
+                var doc = Jsoup.parse(data)
+                // doc.getElementsByClass("series_alpha")
+                var chapter_list = doc.select("div#chapterlist").select("table#listing").select("tr")
+                var chapters = ArrayList<Map<String, String>>()
+                chapter_list.stream().forEach { chapter_a ->
+                    chapter_a.select("a")
+                            .stream()
+                            .forEach{ self_chapters ->
+                                chapters.add(
+                                        mapOf(
+                                                Pair( "url", url_prefix + self_chapters.attr("href") ),
+                                                Pair( "name", self_chapters.text() )
+                                        )
+                                )
+                            }
+                }
+                return chapters
+            }
+        }
+        return ArrayList<Map<String, String>>()
+    }
+
+    fun fetchPages(url: String, url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
+        val (request, response, result) = url
+                .httpGet()
+                .responseString()
+
+        when (result) {
+            is Result.Failure -> {
+                val ex = result.getException()
+                println(ex)
+            }
+            is Result.Success -> {
+                val data = result.get()
+                var doc = Jsoup.parse(data)
+                // doc.getElementsByClass("series_alpha")
+                var chapter_list = doc.select("div#selectpage").select("select#page_menu").select("option")
+                var chapters = ArrayList<Map<String, String>>()
+                chapter_list.stream().forEach { chapter_a ->
+                    chapter_a.select("a")
+                            .stream()
+                            .forEach{ self_chapters ->
+                                chapters.add(
+                                        mapOf(
+                                                Pair( "url", url_prefix + self_chapters.attr("value") ),
+                                                Pair( "name", self_chapters.text() )
+                                        )
+                                )
+                            }
+                }
+                return chapters
+            }
+        }
+        return ArrayList<Map<String, String>>()
     }
 }
 
 fun main() {
     val mr = MangaReader()
     val titles = mr.fetchTitles()
-
 }
