@@ -3,14 +3,16 @@
  */
 package com.palashmax.mangareader
 
+import com.github.kittinunf.fuel.httpDownload
 import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.result.Result;
 import org.jsoup.Jsoup
+import java.io.File
 import java.util.stream.Collectors
 
 class MangaReader {
-    fun fetchTitles(): List<Map<String, String>> {
-        val (request, response, result) = "https://www.mangareader.net/alphabetical"
+    fun fetchTitles(url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
+        val (_, _, result) = "https://www.mangareader.net/alphabetical"
             .httpGet()
             .responseString()
 
@@ -31,7 +33,7 @@ class MangaReader {
                         .forEach{ series_alpha_ul_li ->
                             mangaList.add(
                                     mapOf(
-                                        Pair( "url", series_alpha_ul_li.select("a").attr("href") ),
+                                        Pair( "url", url_prefix + series_alpha_ul_li.select("a").attr("href") ),
                                         Pair( "name", series_alpha_ul_li.select("a").text() )
                                     )
                             )
@@ -44,7 +46,7 @@ class MangaReader {
     }
 
     fun fetchChapters(url: String, url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
-        val (request, response, result) = url
+        val (_, _, result) = url
                 .httpGet()
                 .responseString()
 
@@ -78,7 +80,7 @@ class MangaReader {
     }
 
     fun fetchPages(url: String, url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
-        val (request, response, result) = url
+        val (_, _, result) = url
                 .httpGet()
                 .responseString()
 
@@ -91,13 +93,13 @@ class MangaReader {
                 val data = result.get()
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
-                var chapter_list = doc.select("div#selectpage").select("select#page_menu").select("option")
-                var chapters = ArrayList<Map<String, String>>()
-                chapter_list.stream().forEach { chapter_a ->
+                var pages_list = doc.select("div#selectpage").select("select#page_menu").select("option")
+                var pages = ArrayList<Map<String, String>>()
+                pages_list.stream().forEach { chapter_a ->
                     chapter_a.select("a")
                             .stream()
                             .forEach{ self_chapters ->
-                                chapters.add(
+                                pages.add(
                                         mapOf(
                                                 Pair( "url", url_prefix + self_chapters.attr("value") ),
                                                 Pair( "name", self_chapters.text() )
@@ -105,10 +107,58 @@ class MangaReader {
                                 )
                             }
                 }
-                return chapters
+                return pages
             }
         }
         return ArrayList<Map<String, String>>()
+    }
+
+    fun getCurrentPageImage(url: String): String {
+        val (_, _, result) = url
+                .httpGet()
+                .responseString()
+
+        when (result) {
+            is Result.Failure -> {
+                val ex = result.getException()
+                println(ex)
+            }
+            is Result.Success -> {
+                val data = result.get()
+                var doc = Jsoup.parse(data)
+                // doc.getElementsByClass("series_alpha")
+                var page_image = doc.select("div#imgholder").select("img#img").attr("src")
+                return page_image
+            }
+        }
+        return ""
+    }
+
+    fun downloadImage(url: String): String {
+        var url_split = url.split("/").reversed()
+        var file_name = url_split[0]
+        var folder_name = url_split[2]
+        folder_name = "__dl" + File.separator + folder_name
+        if(!File(folder_name).exists()){
+            File(folder_name).mkdirs();
+        }
+
+        val (_, _, result) = url
+            .httpDownload()
+            .fileDestination { response, url ->
+                File( folder_name + File.separator + file_name, "test.txt")
+            }.responseString()
+
+        when(result){
+            is Result.Failure -> {
+                val ex = result.getException()
+                println(ex)
+            }
+            is Result.Success -> {
+                return folder_name + File.separator + file_name
+            }
+        }
+        return ""
     }
 }
 
