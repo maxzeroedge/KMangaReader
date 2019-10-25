@@ -8,7 +8,10 @@ import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.result.Result;
 import org.jsoup.Jsoup
 import java.io.File
+import java.util.*
 import java.util.stream.Collectors
+import java.util.stream.IntStream
+import kotlin.collections.ArrayList
 
 class MangaReader {
     fun fetchTitles(url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
@@ -93,19 +96,15 @@ class MangaReader {
                 val data = result.get()
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
-                var pages_list = doc.select("div#selectpage").select("select#page_menu").select("option")
+                var pages_list = doc.select("div#selectpage").select("select#pageMenu").select("option")
                 var pages = ArrayList<Map<String, String>>()
                 pages_list.stream().forEach { chapter_a ->
-                    chapter_a.select("a")
-                            .stream()
-                            .forEach{ self_chapters ->
-                                pages.add(
-                                        mapOf(
-                                                Pair( "url", url_prefix + self_chapters.attr("value") ),
-                                                Pair( "name", self_chapters.text() )
-                                        )
-                                )
-                            }
+                    pages.add(
+                            mapOf(
+                                    Pair( "url", url_prefix + chapter_a.attr("value") ),
+                                    Pair( "name", chapter_a.text() )
+                            )
+                    )
                 }
                 return pages
             }
@@ -134,11 +133,11 @@ class MangaReader {
         return ""
     }
 
-    fun downloadImage(url: String): String {
+    fun downloadImage(url: String, folder_name_prefix: String = System.getProperty("user.dir")): String {
         var url_split = url.split("/").reversed()
         var file_name = url_split[0]
         var folder_name = url_split[2]
-        folder_name = "__dl" + File.separator + folder_name
+        folder_name = folder_name_prefix + File.separator + "__dl" + File.separator + folder_name
         if(!File(folder_name).exists()){
             File(folder_name).mkdirs();
         }
@@ -146,7 +145,7 @@ class MangaReader {
         val (_, _, result) = url
             .httpDownload()
             .fileDestination { response, url ->
-                File( folder_name + File.separator + file_name, "test.txt")
+                File( folder_name + File.separator + file_name)
             }.responseString()
 
         when(result){
@@ -165,4 +164,16 @@ class MangaReader {
 fun main() {
     val mr = MangaReader()
     val titles = mr.fetchTitles()
+    IntStream.range(0, titles.size)
+            .forEach { v->println("$v: ${titles[v].get("name")}") }
+    println("Please make a selection: ")
+    val selection = Scanner(System.`in`).nextInt()
+    val chapters = mr.fetchChapters(titles[selection].get("url") as String)
+    chapters.stream().forEach { chapter-> run {
+        val pages = mr.fetchPages(chapter.get("url") as String)
+        pages.parallelStream().forEach { page -> run {
+            val imageUrl = mr.getCurrentPageImage(page.get("url") as String)
+            mr.downloadImage(imageUrl)
+        } }
+    } }
 }
