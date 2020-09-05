@@ -28,19 +28,15 @@ class MangaReader {
                 val data = result.get()
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
-                var series_alpha_uls = doc.select("ul.series_alpha")
+                var series_alpha_uls = doc.select("div.d40 ul li a")
                 var mangaList = ArrayList<Map<String, String>>()
                 series_alpha_uls.stream().forEach { series_alpha_ul ->
-                    series_alpha_ul.select("li")
-                        .stream()
-                        .forEach{ series_alpha_ul_li ->
-                            mangaList.add(
-                                    mapOf(
-                                        Pair( "url", url_prefix + series_alpha_ul_li.select("a").attr("href") ),
-                                        Pair( "name", series_alpha_ul_li.select("a").text() )
-                                    )
-                            )
-                        }
+                    mangaList.add(
+                        mapOf(
+                            Pair( "url", url_prefix + series_alpha_ul.attr("href") ),
+                            Pair( "name", series_alpha_ul.text() )
+                        )
+                    )
                 }
                 return mangaList
             }
@@ -62,19 +58,15 @@ class MangaReader {
                 val data = result.get()
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
-                var chapter_list = doc.select("div#chapterlist").select("table#listing").select("tr")
+                var chapter_list = doc.select("table.d48 a")
                 var chapters = ArrayList<Map<String, String>>()
                 chapter_list.stream().forEach { chapter_a ->
-                    chapter_a.select("a")
-                            .stream()
-                            .forEach{ self_chapters ->
-                                chapters.add(
-                                        mapOf(
-                                                Pair( "url", url_prefix + self_chapters.attr("href") ),
-                                                Pair( "name", self_chapters.text() )
-                                        )
-                                )
-                            }
+                    chapters.add(
+                        mapOf(
+                                Pair( "url", url_prefix + chapter_a.attr("href") ),
+                                Pair( "name", chapter_a.text() )
+                        )
+                    )
                 }
                 return chapters
             }
@@ -82,34 +74,23 @@ class MangaReader {
         return ArrayList<Map<String, String>>()
     }
 
-    fun fetchPages(url: String, url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
-        val (_, _, result) = url
-                .httpGet()
-                .responseString()
+    fun fetchPageImages(url: String, url_prefix: String = "https://www.mangareader.net"): List<String> {
+        var pageNumber = 0
+        var pages = ArrayList<String>()
+        while(pageNumber < 100){
+            var suffix = "/"
+            if(pageNumber > 0){
+                suffix += pageNumber.toString()
+            }
+            var img = getCurrentPageImage("${url}${suffix}");
+            if(pages.last() == img){
+                break
+            }
+            pages.add(img)
 
-        when (result) {
-            is Result.Failure -> {
-                val ex = result.getException()
-                println(ex)
-            }
-            is Result.Success -> {
-                val data = result.get()
-                var doc = Jsoup.parse(data)
-                // doc.getElementsByClass("series_alpha")
-                var pages_list = doc.select("div#selectpage").select("select#pageMenu").select("option")
-                var pages = ArrayList<Map<String, String>>()
-                pages_list.stream().forEach { chapter_a ->
-                    pages.add(
-                            mapOf(
-                                    Pair( "url", url_prefix + chapter_a.attr("value") ),
-                                    Pair( "name", chapter_a.text() )
-                            )
-                    )
-                }
-                return pages
-            }
+            pageNumber++
         }
-        return ArrayList<Map<String, String>>()
+        return pages
     }
 
     fun getCurrentPageImage(url: String): String {
@@ -126,7 +107,7 @@ class MangaReader {
                 val data = result.get()
                 var doc = Jsoup.parse(data)
                 // doc.getElementsByClass("series_alpha")
-                var page_image = doc.select("div#imgholder").select("img#img").attr("src")
+                var page_image = doc.select("img#ci").attr("src")
                 return page_image
             }
         }
