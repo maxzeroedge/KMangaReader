@@ -24,9 +24,8 @@ fun main() {
     val selection = Scanner(System.`in`).nextInt()
     val chapters = mr.fetchChapters(titles[selection].get("url") as String)
     chapters.stream().forEach { chapter-> run {
-        val pages = mr.fetchPages(chapter.get("url") as String)
-        pages.parallelStream().forEach { page -> run {
-            val imageUrl = mr.getCurrentPageImage(page.get("url") as String)
+        val pages = mr.fetchPageImages(chapter.get("url") as String)
+        pages.parallelStream().forEach { imageUrl -> run {
             mr.downloadImage(imageUrl)
         } }
     } }
