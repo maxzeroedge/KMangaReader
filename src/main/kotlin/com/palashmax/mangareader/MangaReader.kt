@@ -15,7 +15,7 @@ import kotlin.collections.ArrayList
 
 class MangaReader {
     fun fetchTitles(url_prefix: String = "https://www.mangareader.net"): List<Map<String, String>> {
-        val (_, _, result) = "https://www.mangareader.net/alphabetical"
+        val (_, _, result) = "$url_prefix/alphabetical"
             .httpGet()
             .responseString()
 
