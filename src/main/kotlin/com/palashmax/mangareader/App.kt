@@ -2,80 +2,107 @@ import com.palashmax.mangareader.MangaReader
 import javafx.application.Application
 import javafx.scene.Group
 import javafx.scene.Node
-import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.ListView
 import javafx.scene.control.SelectionMode
+import javafx.scene.text.Text
 import javafx.stage.Stage
 
 class App: Application() {
     val mangaReader = MangaReader()
     val WIDTH = 1024.0
     val HEIGHT = 768.0
+    lateinit var root: Group
 
     fun main(args: Array<String>) {
         launch("")
     }
 
     override fun start(primaryStage: Stage?) {
-        val root = Group()
+        root = Group()
         val scene = Scene(root, WIDTH, HEIGHT)
 
-        val rootGroupChildren = root.children
+        this.root.children.add(this.showLoadingWidget())
 
-        val titlesList = mangaReader.fetchTitles()
-
-        val listView = ListView<String>()
-        for (title in titlesList){
-            listView.items.add(title["name"])
-        }
-        listView.prefWidth = WIDTH
-        listView.prefHeight = HEIGHT*0.9
-        listView.selectionModel.selectionMode = SelectionMode.SINGLE
-
-        rootGroupChildren.add(listView)
-
-        val button = Button()
-        button.text = "Next"
-        button.setOnMouseClicked {
-            run {
-                val title = titlesList[listView.selectionModel.selectedIndices.first()]
-                val child = this.navigateToChapters(title)
-                scene.root = child as Parent?
-            }
-        }
-        button.translateX = WIDTH - 100
-        button.translateY = HEIGHT*0.9
-        rootGroupChildren.add(button)
-
-        primaryStage!!.title = "Line Tutorial"
+        primaryStage!!.title = "KMangaReader"
         primaryStage.scene = scene
         // primaryStage.isFullScreen = true
         primaryStage.show()
+
+        val titlesList = mangaReader.fetchTitles()
+        val baseListView = getListView(titlesList, SelectionMode.SINGLE)
+        this.root.children.removeAll()
+        this.root.children.add(baseListView)
+
+        val nextButton = getNextButton {
+            titleMouseClicked(titlesList, baseListView.selectionModel.selectedIndices.first())
+        }
+        this.root.children.add(nextButton)
     }
 
-    fun navigateToChapters(titleMap: Map<String, String>): Node{
-        val chapters = titleMap["url"]?.let { mangaReader.fetchChapters(it) }
-        val listView = ListView<String>()
-        if (chapters != null) {
-            for (title in chapters){
-                listView.items.add(title["name"])
+    private fun getNextButton(callback: () -> Unit): Button {
+        val nextButton = Button()
+        nextButton.text = "Next"
+        nextButton.setOnMouseClicked {
+            event -> run {
+                callback()
+                // scene.root = child as Parent?
             }
         }
-        listView.prefWidth = WIDTH
-        listView.prefHeight = HEIGHT*0.9
-        listView.selectionModel.selectionMode = SelectionMode.MULTIPLE
+        nextButton.translateX = WIDTH - 50
+        // button.translateY = HEIGHT*0.9
+        return nextButton
+    }
 
-        val button = Button()
-        button.text = "Next"
-        button.translateX = WIDTH - 100
-        button.translateY = HEIGHT*0.9
+    private fun getListView(mapList: List<Map<String, String>>, selectionMode: SelectionMode = SelectionMode.SINGLE): ListView<String> {
+        val baseListView = ListView<String>()
+        for (mapItem in mapList){
+            baseListView.items.add(mapItem["name"])
+        }
+        baseListView.translateY = 25.0
+        baseListView.prefWidth = WIDTH
+        baseListView.prefHeight = HEIGHT*0.9
+        baseListView.selectionModel.selectionMode = selectionMode
+        return baseListView
+    }
 
-        val root = Group()
-        root.children.add(listView)
-        root.children.add(button)
-        return root
+    private fun showLoadingWidget(): Node {
+        // TODO:
+        val loadingText = Text("Loading...")
+        loadingText.x = WIDTH / 2
+        loadingText.y = HEIGHT / 2
+        return loadingText
+    }
+
+    private fun titleMouseClicked(titlesList: List<Map<String, String>>, selectedIndex: Int){
+        this.root.children.removeAll()
+        this.root.children.add(this.showLoadingWidget())
+        val titleMap = titlesList[selectedIndex]
+        val chapters = titleMap["url"]?.let { mangaReader.fetchChapters(it) }
+
+        val baseListView = getListView(chapters!!, SelectionMode.MULTIPLE)
+        val nextButton = getNextButton { chapterMouseClicked(chapters, baseListView.selectionModel.selectedIndices) }
+        this.root.children.removeAll()
+        this.root.children.add(baseListView)
+        this.root.children.add(nextButton)
+    }
+
+    private fun chapterMouseClicked(chapters: List<Map<String, String>>, selectedIndices: List<Int>) {
+        // TODO: Show pages
+        this.root.children.removeAll()
+        this.root.children.add(this.showLoadingWidget())
+        val chapter = chapters[selectedIndices[0]]
+        val pages = mangaReader.fetchPageImages(chapter["url"] as String).mapIndexed { index, imageUrl -> mapOf(
+                Pair("name", "Page: ${index+1}"),
+                Pair("url", imageUrl)
+        ) }
+
+        val baseListView = getListView(pages!!, SelectionMode.MULTIPLE)
+        val nextButton = getNextButton { print(baseListView.selectionModel.selectedItems.first()) }
+        this.root.children.removeAll()
+        this.root.children.add(baseListView)
+        this.root.children.add(nextButton)
     }
 }
 

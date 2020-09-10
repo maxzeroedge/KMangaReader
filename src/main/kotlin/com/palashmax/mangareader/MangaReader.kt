@@ -74,16 +74,16 @@ class MangaReader {
         return ArrayList<Map<String, String>>()
     }
 
-    fun fetchPageImages(url: String, url_prefix: String = "https://www.mangareader.net"): List<String> {
+    fun fetchPageImages(url: String): List<String> {
         var pageNumber = 0
         var pages = ArrayList<String>()
-        while(pageNumber < 100){
+        while(pageNumber < 1000){
             var suffix = "/"
             if(pageNumber > 0){
                 suffix += pageNumber.toString()
             }
             var img = getCurrentPageImage("${url}${suffix}");
-            if(pages.last() == img){
+            if(!pages.isEmpty() && pages.last() == img){
                 break
             }
             pages.add(img)
