@@ -112,11 +112,12 @@ class App: Application() {
 
         val pane = FlowPane()
         pane.hgap = 25.0
-        pages.parallelStream().forEach { page -> run{
+        pages.forEach { page -> run{
             val image = Image(page["url"])
             val imageView = ImageView(image)
-            imageView.fitHeight = 50.0
-            imageView.fitWidth = 25.0
+            imageView.isPreserveRatio = true
+            imageView.fitHeight = 100.0
+            imageView.fitWidth = 75.0
             pane.children.add(imageView)
             print("done ${page["name"]}" )
         } }
