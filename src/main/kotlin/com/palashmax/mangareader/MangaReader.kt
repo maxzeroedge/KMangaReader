@@ -75,14 +75,14 @@ class MangaReader {
     }
 
     fun fetchPageImages(url: String): List<String> {
-        var pageNumber = 0
-        var pages = ArrayList<String>()
+        var pageNumber = 1
+        val pages = ArrayList<String>()
         while(pageNumber < 1000){
             var suffix = "/"
             if(pageNumber > 0){
                 suffix += pageNumber.toString()
             }
-            var img = getCurrentPageImage("${url}${suffix}");
+            val img = getCurrentPageImage("${url}${suffix}");
             if(!pages.isEmpty() && pages.last() == img){
                 break
             }

@@ -6,8 +6,13 @@ import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.ListView
 import javafx.scene.control.SelectionMode
+import javafx.scene.image.Image
+import javafx.scene.image.ImageView
+import javafx.scene.layout.FlowPane
+import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.Stage
+import kotlinx.coroutines.*
 
 class App: Application() {
     val mangaReader = MangaReader()
@@ -32,11 +37,13 @@ class App: Application() {
 
         val titlesList = mangaReader.fetchTitles()
         val baseListView = getListView(titlesList, SelectionMode.SINGLE)
-        this.root.children.removeAll()
+        this.root.children.clear()
         this.root.children.add(baseListView)
 
         val nextButton = getNextButton {
-            titleMouseClicked(titlesList, baseListView.selectionModel.selectedIndices.first())
+            val selection = baseListView.selectionModel.selectedIndices.first()
+            baseListView.items.clear()
+            titleMouseClicked(titlesList, selection)
         }
         this.root.children.add(nextButton)
     }
@@ -45,7 +52,7 @@ class App: Application() {
         val nextButton = Button()
         nextButton.text = "Next"
         nextButton.setOnMouseClicked {
-            event -> run {
+            run {
                 callback()
                 // scene.root = child as Parent?
             }
@@ -70,39 +77,52 @@ class App: Application() {
     private fun showLoadingWidget(): Node {
         // TODO:
         val loadingText = Text("Loading...")
+        loadingText.font = Font.font(20.0)
         loadingText.x = WIDTH / 2
         loadingText.y = HEIGHT / 2
         return loadingText
     }
 
     private fun titleMouseClicked(titlesList: List<Map<String, String>>, selectedIndex: Int){
-        this.root.children.removeAll()
+        this.root.children.clear()
         this.root.children.add(this.showLoadingWidget())
         val titleMap = titlesList[selectedIndex]
         val chapters = titleMap["url"]?.let { mangaReader.fetchChapters(it) }
 
-        val baseListView = getListView(chapters!!, SelectionMode.MULTIPLE)
-        val nextButton = getNextButton { chapterMouseClicked(chapters, baseListView.selectionModel.selectedIndices) }
-        this.root.children.removeAll()
+        val baseListView = getListView(chapters!!, SelectionMode.SINGLE)
+        val nextButton = getNextButton {
+            val selection = baseListView.selectionModel.selectedIndices.map { indx -> indx }
+            baseListView.items.clear()
+            chapterMouseClicked(chapters, selection)
+        }
+        this.root.children.clear()
         this.root.children.add(baseListView)
         this.root.children.add(nextButton)
     }
 
     private fun chapterMouseClicked(chapters: List<Map<String, String>>, selectedIndices: List<Int>) {
         // TODO: Show pages
-        this.root.children.removeAll()
+        this.root.children.clear()
         this.root.children.add(this.showLoadingWidget())
         val chapter = chapters[selectedIndices[0]]
         val pages = mangaReader.fetchPageImages(chapter["url"] as String).mapIndexed { index, imageUrl -> mapOf(
                 Pair("name", "Page: ${index+1}"),
-                Pair("url", imageUrl)
+                Pair("url", "https:$imageUrl")
         ) }
 
-        val baseListView = getListView(pages!!, SelectionMode.MULTIPLE)
-        val nextButton = getNextButton { print(baseListView.selectionModel.selectedItems.first()) }
-        this.root.children.removeAll()
-        this.root.children.add(baseListView)
-        this.root.children.add(nextButton)
+        val pane = FlowPane()
+        pane.hgap = 25.0
+        pages.parallelStream().forEach { page -> run{
+            val image = Image(page["url"])
+            val imageView = ImageView(image)
+            imageView.fitHeight = 50.0
+            imageView.fitWidth = 25.0
+            pane.children.add(imageView)
+            print("done ${page["name"]}" )
+        } }
+
+        this.root.children.clear()
+        this.root.children.add(pane)
     }
 }
 
