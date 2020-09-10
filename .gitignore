@@ -3,10 +3,12 @@
 
 # Ignore Gradle build output directory
 build
-gradle*
+# gradle*
 
 .idea
 .project
 .settings
 .vscode
 __dl
+local.properties
+bin
