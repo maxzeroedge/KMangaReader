@@ -9,8 +9,10 @@ import javafx.scene.control.SelectionMode
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import javafx.scene.layout.FlowPane
+import javafx.scene.layout.StackPane
 import javafx.scene.text.Font
 import javafx.scene.text.Text
+import javafx.stage.Modality
 import javafx.stage.Stage
 import kotlinx.coroutines.*
 
@@ -19,6 +21,7 @@ class App: Application() {
     val WIDTH = 1024.0
     val HEIGHT = 768.0
     lateinit var root: Group
+    lateinit var baseStage: Stage
 
     fun main(args: Array<String>) {
         launch("")
@@ -27,17 +30,20 @@ class App: Application() {
     override fun start(primaryStage: Stage?) {
         root = Group()
         val scene = Scene(root, WIDTH, HEIGHT)
-
-        this.root.children.add(this.showLoadingWidget())
+        baseStage = primaryStage!!
 
         primaryStage!!.title = "KMangaReader"
         primaryStage.scene = scene
         // primaryStage.isFullScreen = true
         primaryStage.show()
 
+        val loadingStage = this.showLoadingWidget()
+
         val titlesList = mangaReader.fetchTitles()
         val baseListView = getListView(titlesList, SelectionMode.SINGLE)
-        this.root.children.clear()
+
+        loadingStage.close()
+
         this.root.children.add(baseListView)
 
         val nextButton = getNextButton {
@@ -74,18 +80,34 @@ class App: Application() {
         return baseListView
     }
 
-    private fun showLoadingWidget(): Node {
-        // TODO:
-        val loadingText = Text("Loading...")
+    private fun showLoadingWidget(): Stage {
+        val loading_width = 350.0
+        val loading_height = 200.0
+        val panel = StackPane()
+        val scene = Scene(panel, loading_width, loading_height)
+
+        val loadingStage = Stage()
+        loadingStage.title = "Preparing"
+        loadingStage.scene = scene
+        loadingStage.initModality(Modality.WINDOW_MODAL)
+        loadingStage.initOwner(baseStage)
+        loadingStage.x = baseStage.x + ((baseStage.width - loading_width)/2)
+        loadingStage.y = baseStage.y + ((baseStage.height - loading_height)/2)
+        loadingStage.show()
+
+        val loadingText = Text("Please Wait...")
         loadingText.font = Font.font(20.0)
-        loadingText.x = WIDTH / 2
-        loadingText.y = HEIGHT / 2
-        return loadingText
+        loadingText.x = baseStage.x + loading_height/2
+        loadingText.y = baseStage.y + loading_height/2
+        panel.children.add(loadingText)
+        return loadingStage
     }
 
     private fun titleMouseClicked(titlesList: List<Map<String, String>>, selectedIndex: Int){
         this.root.children.clear()
-        this.root.children.add(this.showLoadingWidget())
+
+        val loadingStage = this.showLoadingWidget()
+
         val titleMap = titlesList[selectedIndex]
         val chapters = titleMap["url"]?.let { mangaReader.fetchChapters(it) }
 
@@ -95,7 +117,7 @@ class App: Application() {
             baseListView.items.clear()
             chapterMouseClicked(chapters, selection)
         }
-        this.root.children.clear()
+        loadingStage.close()
         this.root.children.add(baseListView)
         this.root.children.add(nextButton)
     }
@@ -103,7 +125,7 @@ class App: Application() {
     private fun chapterMouseClicked(chapters: List<Map<String, String>>, selectedIndices: List<Int>) {
         // TODO: Show pages
         this.root.children.clear()
-        this.root.children.add(this.showLoadingWidget())
+        val loadingStage = this.showLoadingWidget()
         val chapter = chapters[selectedIndices[0]]
         val pages = mangaReader.fetchPageImages(chapter["url"] as String).mapIndexed { index, imageUrl -> mapOf(
                 Pair("name", "Page: ${index+1}"),
@@ -122,7 +144,7 @@ class App: Application() {
             print("done ${page["name"]}" )
         } }
 
-        this.root.children.clear()
+        loadingStage.close()
         this.root.children.add(pane)
     }
 }

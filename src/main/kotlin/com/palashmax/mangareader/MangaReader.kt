@@ -140,5 +140,21 @@ class MangaReader {
         }
         return ""
     }
+
+    fun downloadChapter(chapter: Map<String, String>, folder_name_prefix: String = System.getProperty("user.dir")){
+        chapter["url"]?.let {
+            fetchPageImages(it).forEach {
+                downloadImage(it, "$folder_name_prefix${File.separator}${chapter["name"]}")
+            }
+        }
+    }
+
+    fun downloadTitle(title: Map<String, String>, folder_name_prefix: String = System.getProperty("user.dir")){
+        title["url"]?.let {
+            fetchChapters(it).forEach {
+                downloadChapter(it, "$folder_name_prefix${File.separator}${title["name"]}")
+            }
+        }
+    }
 }
 
